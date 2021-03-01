@@ -1,0 +1,429 @@
+#!/usr/bin/python3.5
+# -*- coding: utf-8 -*-
+#数据集训练
+#手写数字识别
+from tensorflow.examples.tutorials.mnist import input_data
+
+import tensorflow as tf
+
+mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
+
+x = tf.placeholder(tf.float32, [None, 784])
+
+y_ = tf.placeholder(tf.float32, [None, 10])
+
+
+def weight_variable(shape):
+    initial = tf.truncated_normal(shape, stddev=0.1)
+    return tf.Variable(initial)
+
+
+def bias_variable(shape):
+    initial = tf.constant(0.1, shape=shape)
+    return tf.Variable(initial)
+
+
+def conv2d(x, W):
+    return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
+
+
+def max_pool_2x2(x):
+    return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+
+
+W_conv1 = weight_variable([5, 5, 1, 32])
+b_conv1 = bias_variable([32])
+
+x_image = tf.reshape(x, [-1, 28, 28, 1])
+
+h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
+h_pool1 = max_pool_2x2(h_conv1)
+
+W_conv2 = weight_variable([5, 5, 32, 64])
+b_conv2 = bias_variable([64])
+
+h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
+h_pool2 = max_pool_2x2(h_conv2)
+
+W_fc1 = weight_variable([7 * 7 * 64, 1024])
+b_fc1 = bias_variable([1024])
+
+h_pool2_flat = tf.reshape(h_pool2, [-1, 7 * 7 * 64])
+h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
+
+keep_prob = tf.placeholder("float")
+h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
+
+W_fc2 = weight_variable([1024, 10])
+b_fc2 = bias_variable([10])
+
+y_conv = tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
+
+cross_entropy = -tf.reduce_sum(y_ * tf.log(y_conv))
+train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
+accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+
+saver = tf.train.Saver()
+
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    for i in range(20000):
+        batch = mnist.train.next_batch(50)
+        if i % 100 == 0:
+            train_accuracy = accuracy.eval(feed_dict={
+                x: batch[0], y_: batch[1], keep_prob: 1.0})
+            print('step %d, training accuracy %g' % (i, train_accuracy))
+        train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
+    saver.save(sess, 'WModel/model.ckpt')
+
+    print('test accuracy %g' % accuracy.eval(feed_dict={
+        x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
+
+
+
+        #!/usr/bin/python3.5
+# -*- coding: utf-8 -*-
+from PIL import Image, ImageFilter
+import tensorflow as tf
+import matplotlib.pyplot as plt
+import time
+
+def imageprepare():
+    """
+    This function returns the pixel values.
+    The imput is a png file location.
+    """
+    file_name='result/4.bmp'#导入自己的图片地址
+    #in terminal 'mogrify -format png *.jpg' convert jpg to png
+    im = Image.open(file_name)
+    # plt.imshow(im)
+    # plt.show()
+    im = im.convert('L')
+
+    im.save("sample.png")
+    
+    
+    tv = list(im.getdata()) #get pixel values
+
+    #normalize pixels to 0 and 1. 0 is pure white, 1 is pure black.
+    tva = [ (255-x)*1.0/255.0 for x in tv] 
+    #print(tva)
+    return tva
+
+
+
+    """
+    This function returns the predicted integer.
+    The imput is the pixel values from the imageprepare() function.
+    """
+
+    # Define the model (same as when creating the model file)
+
+result=imageprepare()
+
+
+x = tf.placeholder(tf.float32, [None, 784])
+
+y_ = tf.placeholder(tf.float32, [None, 10])
+
+
+def weight_variable(shape):
+    initial = tf.truncated_normal(shape,stddev = 0.1)
+    return tf.Variable(initial)
+
+def bias_variable(shape):
+    initial = tf.constant(0.1,shape = shape)
+    return tf.Variable(initial)
+
+def conv2d(x,W):
+    return tf.nn.conv2d(x, W, strides = [1,1,1,1], padding = 'SAME')
+
+def max_pool_2x2(x):
+    return tf.nn.max_pool(x, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME')
+
+W_conv1 = weight_variable([5, 5, 1, 32])
+b_conv1 = bias_variable([32])
+
+x_image = tf.reshape(x,[-1,28,28,1])
+
+h_conv1 = tf.nn.relu(conv2d(x_image,W_conv1) + b_conv1)
+h_pool1 = max_pool_2x2(h_conv1)
+
+W_conv2 = weight_variable([5, 5, 32, 64])
+b_conv2 = bias_variable([64])
+
+h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
+h_pool2 = max_pool_2x2(h_conv2)
+
+W_fc1 = weight_variable([7 * 7 * 64, 1024])
+b_fc1 = bias_variable([1024])
+
+h_pool2_flat = tf.reshape(h_pool2, [-1, 7*7*64])
+h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
+
+keep_prob = tf.placeholder("float")
+h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
+
+W_fc2 = weight_variable([1024, 10])
+b_fc2 = bias_variable([10])
+
+y_conv=tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
+
+cross_entropy = -tf.reduce_sum(y_*tf.log(y_conv))
+train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+correct_prediction = tf.equal(tf.argmax(y_conv,1), tf.argmax(y_,1))
+accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+
+saver = tf.train.Saver()
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    saver.restore(sess, "./WModel/model.ckpt")#这里使用了之前保存的模型参数
+    print ("Model restored.")
+
+    prediction=tf.argmax(y_conv,1)
+    predint=prediction.eval(feed_dict={x: [result],keep_prob: 1.0}, session=sess)
+    print(h_conv2)
+
+    print('识别结果:')
+    print(predint[0])
+
+
+
+
+#猫狗识别
+#图像获取
+def get_files(file_path):
+	class_train = []
+	label_train = []
+	for train_class in os.listdir(file_path):
+		for pic_name in os.listdir(file_path + train_class):
+			class_train.append(file_path + train_class + '/' + pic_name)
+			label_train.append(train_class)
+	temp = np.array([class_train, label_train])
+	temp = temp.transpose()
+	np.random.shuffle(temp)
+ 
+	image_list = list(temp[:,0])
+	label_list = list(temp[:,1])
+	# class is 1 2 3 4 5 
+	label_list = [int(i) for i in label_list]
+	return image_list, label_list
+ 
+def get_batches(image, label, resize_w, resize_h, batch_size, capacity):
+	image = tf.cast(image, tf.string)
+	label = tf.cast(label, tf.int64)
+	queue = tf.train.slice_input_producer([image, label])
+	label = queue[1]
+	image_temp = tf.read_file(queue[0])
+	image = tf.image.decode_jpeg(image_temp, channels = 3)
+	#resize image 
+	image = tf.image.resize_image_with_crop_or_pad(image, resize_w, resize_h)
+ 
+	image = tf.image.per_image_standardization(image)
+ 
+	image_batch, label_batch = tf.train.batch([image, label], batch_size = batch_size,
+		num_threads = 64,
+		capacity = capacity)
+	images_batch = tf.cast(image_batch, tf.float32)
+	labels_batch = tf.reshape(label_batch, [batch_size])
+	return images_batch, labels_batch
+
+
+
+    #模型构建
+    def inference(images, batch_size, n_classes):
+    # 
+    # conv1
+    # 
+    with tf.variable_scope('conv1') as scope:
+        weights = tf.Variable(tf.truncated_normal(shape=[3, 3, 3, 64], stddev=1.0, dtype=tf.float32),
+                              name='weights', dtype=tf.float32)
+ 
+        biases = tf.Variable(tf.constant(value=0.1, dtype=tf.float32, shape=[64]),
+                             name='biases', dtype=tf.float32)
+ 
+        conv = tf.nn.conv2d(images, weights, strides=[1, 1, 1, 1], padding='SAME')
+        pre_activation = tf.nn.bias_add(conv, biases)
+        conv1 = tf.nn.relu(pre_activation, name=scope.name)
+ 
+    # pooling1
+    # 
+    with tf.variable_scope('pooling1_lrn') as scope:
+        pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME', name='pooling1')
+        norm1 = tf.nn.lrn(pool1, depth_radius=4, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='norm1')
+ 
+    # conv2
+    with tf.variable_scope('conv2') as scope:
+        weights = tf.Variable(tf.truncated_normal(shape=[3, 3, 64, 16], stddev=0.1, dtype=tf.float32),
+                              name='weights', dtype=tf.float32)
+ 
+        biases = tf.Variable(tf.constant(value=0.1, dtype=tf.float32, shape=[16]),
+                             name='biases', dtype=tf.float32)
+ 
+        conv = tf.nn.conv2d(norm1, weights, strides=[1, 1, 1, 1], padding='SAME')
+        pre_activation = tf.nn.bias_add(conv, biases)
+        conv2 = tf.nn.relu(pre_activation, name='conv2')
+ 
+    # pooling2
+    with tf.variable_scope('pooling2_lrn') as scope:
+        norm2 = tf.nn.lrn(conv2, depth_radius=4, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='norm2')
+        pool2 = tf.nn.max_pool(norm2, ksize=[1, 3, 3, 1], strides=[1, 1, 1, 1], padding='SAME', name='pooling2')
+ 
+    # fc3
+    with tf.variable_scope('local3') as scope:
+        reshape = tf.reshape(pool2, shape=[batch_size, -1])
+        dim = reshape.get_shape()[1].value
+        weights = tf.Variable(tf.truncated_normal(shape=[dim, 128], stddev=0.005, dtype=tf.float32),
+                              name='weights', dtype=tf.float32)
+ 
+        biases = tf.Variable(tf.constant(value=0.1, dtype=tf.float32, shape=[128]),
+                             name='biases', dtype=tf.float32)
+ 
+        local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases, name=scope.name)
+ 
+    # fc4
+    with tf.variable_scope('local4') as scope:
+        weights = tf.Variable(tf.truncated_normal(shape=[128, 128], stddev=0.005, dtype=tf.float32),
+                              name='weights', dtype=tf.float32)
+ 
+        biases = tf.Variable(tf.constant(value=0.1, dtype=tf.float32, shape=[128]),
+                             name='biases', dtype=tf.float32)
+ 
+        local4 = tf.nn.relu(tf.matmul(local3, weights) + biases, name='local4')
+ 
+    # dropout
+    #    with tf.variable_scope('dropout') as scope:
+    #        drop_out = tf.nn.dropout(local4, 0.8)
+    with tf.variable_scope('softmax_linear') as scope:
+        weights = tf.Variable(tf.truncated_normal(shape=[128, n_classes], stddev=0.005, dtype=tf.float32),
+                              name='softmax_linear', dtype=tf.float32)
+ 
+        biases = tf.Variable(tf.constant(value=0.1, dtype=tf.float32, shape=[n_classes]),
+                             name='biases', dtype=tf.float32)
+ 
+        softmax_linear = tf.add(tf.matmul(local4, weights), biases, name='softmax_linear')
+ 
+    return softmax_linear
+ 
+ 
+# -----------------------------------------------------------------------------
+# cal loss
+def losses(logits, labels):
+    with tf.variable_scope('loss') as scope:
+        cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels,
+                                                                       name='xentropy_per_example')
+        loss = tf.reduce_mean(cross_entropy, name='loss')
+        tf.summary.scalar(scope.name + '/loss', loss)
+    return loss
+ 
+ 
+# --------------------------------------------------------------------------
+# loss
+# loss learning_rate
+# train_op
+def trainning(loss, learning_rate):
+    with tf.name_scope('optimizer'):
+        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        global_step = tf.Variable(0, name='global_step', trainable=False)
+        train_op = optimizer.minimize(loss, global_step=global_step)
+    return train_op
+ 
+ 
+# -----------------------------------------------------------------------
+ 
+def evaluation(logits, labels):
+    with tf.variable_scope('accuracy') as scope:
+        correct = tf.nn.in_top_k(logits, labels, 1)
+        correct = tf.cast(correct, tf.float16)
+        accuracy = tf.reduce_mean(correct)
+        tf.summary.scalar(scope.name + '/accuracy', accuracy)
+    return accuracy
+
+
+
+#训练模型
+train,train_label = get_files('/home/jyf/jyf/python/PeopleRecong/train_image/')
+ 
+train_batch, train_label_batch = get_batches(train, train_label, 64, 64, 10, 20)
+ 
+train_logits = model.inference(train_batch, 10, 2)
+ 
+train_loss = model.losses(train_logits, train_label_batch)
+ 
+train_op = model.trainning(train_loss, 0.001)
+ 
+train_acc = model.evaluation(train_logits, train_label_batch)
+ 
+summary_op = tf.summary.merge_all()
+ 
+sess = tf.Session()
+train_writer = tf.summary.FileWriter(LOG_DIR, sess.graph)
+saver = tf.train.Saver()
+ 
+sess.run(tf.global_variables_initializer())
+ 
+coord = tf.train.Coordinator()
+ 
+threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+ 
+try:
+	for step in np.arange(1000):
+		if coord.should_stop():
+			break
+		_, tra_loss, tra_acc = sess.run([train_op, train_loss, train_acc])
+ 
+		if step % 10 == 0:
+			print('Step %d, train loss=%.2f, train accuracy = %.2f%%' %(step, tra_loss, tra_acc))
+			summary_str = sess.run(summary_op)
+			train_writer.add_summary(summary_str, step)
+		if (step + 1) == 1000:
+			checkpoint_path = os.path.join(CHECK_POINT_DIR, 'model_ckpt')
+			saver.save(sess, checkpoint_path, global_step=step)
+except tf.errors.OutOfRangeError:
+	print ('Done training')
+finally:
+	coord.request_stop()
+coord.join(threads)
+
+
+#测试模型
+CHECK_POINT_DIR = '/home/jyf/jyf/python/PeopleRecong/modelsave'
+def evaluate_one_image(image_array):
+	with tf.Graph().as_default():
+		image = tf.cast(image_array, tf.float32)
+		image = tf.image.per_image_standardization(image)
+		image = tf.reshape(image, [1, 64,64,3])
+ 
+		logit = model.inference(image, 1, 2)
+		logit = tf.nn.softmax(logit)
+ 
+		x = tf.placeholder(tf.float32, shape=[64,64,3])
+ 
+		saver = tf.train.Saver()
+		with tf.Session() as sess:
+			print ('Reading checkpoints...')
+			ckpt = tf.train.get_checkpoint_state(CHECK_POINT_DIR)
+			if ckpt and ckpt.model_checkpoint_path:
+				global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
+				saver.restore(sess, ckpt.model_checkpoint_path)
+				print('Loading success, global_step is %s' %global_step)
+			else:
+				print ('No checkpoint file found')
+			prediction = sess.run(logit, feed_dict = {x:image_array})
+			max_index = np.argmax(prediction)
+			print (prediction)
+			if max_index == 0:
+				result = ('this is cat rate: %.6f, result prediction is [%s]' %(prediction[:,0],','.join(str(i) for i in prediction[0])))
+			else:
+				result = ('this is dog rate: %.6f, result prediction is [%s]' %(prediction[:,1],','.join(str(i) for i in prediction[0])))
+			return result
+ 
+ 
+if __name__ == '__main__':
+	image = Image.open('/home/jyf/jyf/python/PeopleRecong/4.jpg')
+	plt.imshow(image)
+	plt.show()
+	image = image.resize([64,64])
+	image = np.array(image)
+	print evaluate_one_image(image)
